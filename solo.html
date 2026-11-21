@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel App - Messages</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        html, body { margin: 0; padding: 0; overflow: hidden; background: #cbd5e1; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+        .phone-frame { width: 345px; height: 610px; background: #ffffff; border-radius: 32px; border: 8px solid #1e293b; position: relative; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; transform: scale(0.85); transform-origin: center center; }
+        .top-header { display: flex; align-items: center; justify-content: center; padding: 12px 15px; background: #ffffff; border-bottom: 1px solid #f0f4f8; }
+        .messenger-body { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow-y: auto; scrollbar-width: none; }
+        .section-label { font-size: 10px; color: #666; font-weight: bold; text-transform: uppercase; padding: 10px 12px 4px 12px; text-align: left; }
+        .chat-row-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; background: white; cursor: pointer; }
+        .chat-row-item:hover { background: #f1f5f9; }
+
+        .nearby-empty-box { margin: 4px 12px 8px 12px; padding: 10px; background: #f0f7fc; border: 1px solid #91AEC4; border-radius: 10px; font-size: 11px; color: #333; text-align: left; }
+        .nearby-empty-box a { color: #194569; font-weight: bold; text-decoration: none; }
+
+        .chat-active-window { position: absolute; top: 45px; left: 0; width: 100%; height: calc(100% - 100px); background: #ffffff; z-index: 500; display: none; flex-direction: column; }
+        .chat-active-window.active { display: flex; }
+        .log-stream { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .bubble { max-width: 75%; padding: 8px 12px; border-radius: 14px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; line-height: 1.4; word-wrap: break-word; }
+        .bubble.user { background: #194569; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .bubble.ai { background: #e2e8f0; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .bubble.ai.error { background: #fde2e2; color: #a12727; }
+        .chat-input-bar { display: flex; padding: 8px; border-top: 1px solid #e2e8f0; background: white; align-items: center; gap: 6px; }
+        .chat-input-bar input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 20px; outline: none; font-size: 12px; }
+        .chat-input-bar input:disabled { opacity: 0.6; }
+        .chat-input-bar button { background: #194569; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+        .chat-input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 55px; background: #ffffff; border-top: 1px solid #f0f0f0; display: flex; justify-space: around; align-items: center; z-index: 9999; }
+        .nav-item { background: none; border: none; font-size: 11px; font-weight: bold; color: #5F84A2; display: flex; flex-direction: column; align-items: center; text-decoration: none; flex: 1; }
+        .nav-item.active { color: #194569; }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="top-header">
+            <h3 style="margin: 0; color: #194569; font-size: 14px; font-weight: bold;">Messages</h3>
+        </div>
+
+        <div class="messenger-body">
+            <p class="section-label">🌍 Travelers Near You</p>
+            <a href="match.html" style="display:block; margin:0 12px 10px 12px; padding:10px; background:#194569; color:white; border-radius:10px; text-decoration:none; font-size:12px; font-weight:bold; text-align:center;">💘 Find Travel Buddies</a>
+            <div id="nearbyTravelersList"></div>
+
+            <p class="section-label">AI Copilot</p>
+            <div class="chat-row-item" onclick="openChatInterface('ai_bot', '🤖 AI Travel Copilot')">
+                <div style="width:36px; height:36px; background:#194569; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;">🤖</div>
+                <div style="margin-left:10px; text-align:left;">
+                    <strong style="font-size:13px; color:#194569;">AI Travel Copilot</strong>
+                    <p style="margin:2px 0 0 0; font-size:10px; color:#64748b;">Ask about hidden gems, day plans, dates & food loops across India!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-active-window" id="chatActiveWindow">
+            <div style="padding: 8px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display:flex; align-items:center;">
+                <button onclick="closeChatInterface()" style="background:none; border:none; color:#194569; font-weight:bold; cursor:pointer;">← Back</button>
+                <span id="activeChatPartnerName" style="margin-left:12px; font-size:12px; font-weight:bold; color:#194569;">Chat</span>
+            </div>
+
+            <div class="log-stream" id="logStreamBox"></div>
+
+            <div class="chat-input-bar">
+                <input type="text" id="chatInputField" placeholder="Type your message..." onkeypress="if(event.key==='Enter') dispatchMessage()">
+                <button id="sendBtn" onclick="dispatchMessage()">🚀</button>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <a href="discover.html" class="nav-item">🏠<br>Explore</a>
+            <button class="nav-item active">💬<br>Messages</button>
+            <a href="profile.html" class="nav-item">👤<br>Profile</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+        // Replace with your Firebase Configuration object if updated
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs0OGS4sSH8cnKCFEcHULC2Dj7Fp1tQIY",
+            authDomain: "travel-app-9a965.firebaseapp.com",
+            projectId: "travel-app-9a965",
+            storageBucket: "travel-app-9a965.firebasestorage.app",
+            messagingSenderId: "611523199957",
+            appId: "1:611523199957:web:0b183bc5f1e8f67182335c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const nearbyListEl = document.getElementById('nearbyTravelersList');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            const mySnap = await getDoc(doc(db, "users", user.uid));
+            if (!mySnap.exists()) return;
+
+            const myData = mySnap.data();
+            const myCity = (myData.currentCity || "").trim().toLowerCase();
+
+            if (!myData.visibleOnSolo || myCity === "") {
+                nearbyListEl.innerHTML = `
+                    <div class="nearby-empty-box">
+                        Turn on visibility and set your city in <a href="setting.html">Settings</a> to see (and be seen by) other travelers nearby.
+                    </div>
+                `;
+                return;
+            }
+
+            const q = query(collection(db, "users"), where("visibleOnSolo", "==", true));
+            const snap = await getDocs(q);
+
+            const matches = [];
+            snap.forEach((docSnap) => {
+                if (docSnap.id === user.uid) return;
+                const data = docSnap.data();
+                const theirCity = (data.currentCity || "").trim().toLowerCase();
+                if (theirCity === myCity) {
+                    matches.push({ uid: docSnap.id, username: data.username || "traveler" });
+                }
+            });
+
+            if (matches.length === 0) {
+                nearbyListEl.innerHTML = `
+                    <div class="nearby-empty-box">
+                        No one else is visible in <strong>${myData.currentCity}</strong> right now. Check back soon!
+                    </div>
+                `;
+                return;
+            }
+
+            nearbyListEl.innerHTML = "";
+            matches.forEach((m) => {
+                const row = document.createElement('div');
+                row.className = "chat-row-item";
+                row.innerHTML = `
+                    <div style="width:36px; height:36px; background:#5F84A2; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;">👤</div>
+                    <div style="margin-left:10px; text-align:left;">
+                        <strong style="font-size:13px; color:#333;">@${m.username}</strong>
+                        <p style="margin:2px 0 0 0; font-size:10px; color:#64748b;">Also exploring ${myData.currentCity} right now</p>
+                    </div>
+                `;
+                row.onclick = () => {
+                    alert("Real 1-on-1 chat is coming in the next update! For now this just shows who's around.");
+                };
+                nearbyListEl.appendChild(row);
+            });
+        });
+    </script>
+
+    <script>
+        var activeChatId = "";
+
+        // Gemini runs through the secure Cloudflare Worker. Never put a Gemini key here.
+        // Replace this URL after deploying the Worker (see cloudflare-worker/README.md).
+        const AI_API_URL = "https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev/api/chat";
+
+        var currentUser = localStorage.getItem('loggedInUser') || "Guest";
+
+        function openChatInterface(chatId, name) {
+            activeChatId = chatId;
+            document.getElementById('activeChatPartnerName').textContent = name;
+            document.getElementById('chatActiveWindow').classList.add('active');
+            renderChatLogs();
+        }
+
+        function closeChatInterface() {
+            document.getElementById('chatActiveWindow').classList.remove('active');
+        }
+
+        function renderChatLogs() {
+            var box = document.getElementById('logStreamBox');
+            box.innerHTML = "";
+            var privateStorageKey = currentUser + '_chatHistory_' + activeChatId;
+            var logs = JSON.parse(localStorage.getItem(privateStorageKey)) || [];
+
+            if (logs.length === 0 && activeChatId === 'ai_bot') {
+                logs = [{ sender: 'ai', text: `Hey ${currentUser}! I'm your private travel copilot. Let's map out a perfect day-out itinerary, hidden gems, street food tracks, mall gaming spaces, or dates anywhere in India! 🗺️✨` }];
+            }
+
+            logs.forEach((m, idx) => {
+                var b = document.createElement('div');
+                b.className = "bubble " + (m.sender === 'user' ? 'user' : 'ai');
+                b.innerHTML = `
+                    <span>${m.text}</span>
+                    <span style="cursor:pointer; font-size:9px; opacity:0.6; padding-left:5px; color:#e63946;" onclick="deleteMessageRow('${idx}', event)">🗑️</span>
+                `;
+                box.appendChild(b);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+async function dispatchMessage() {
+            var f = document.getElementById('chatInputField');
+            var txt = f.value.trim();
+            if (txt === "") return;
+
+            var privateStorageKey = currentUser + '_chatHistory_' + activeChatId;
+            var logs = JSON.parse(localStorage.getItem(privateStorageKey)) || [];
+            logs.push({ sender: 'user', text: txt });
+            localStorage.setItem(privateStorageKey, JSON.stringify(logs));
+            f.value = "";
+            renderChatLogs();
+
+            if (activeChatId === 'ai_bot') {
+                var sendBtn = document.getElementById('sendBtn');
+                var inputField = document.getElementById('chatInputField');
+                sendBtn.disabled = true;
+                inputField.disabled = true;
+
+                var box = document.getElementById('logStreamBox');
+                var loader = document.createElement('div');
+                loader.className = "bubble ai";
+                loader.id = "bot_loader";
+                loader.textContent = "Thinking...";
+                box.appendChild(loader);
+                box.scrollTop = box.scrollHeight;
+
+                try {
+                    if (AI_API_URL.includes("YOUR-WORKER-NAME")) {
+                        throw new Error("AI Copilot backend is not configured yet. Deploy the Cloudflare Worker and set AI_API_URL in solo.html.");
+                    }
+
+                    var res = await fetch(AI_API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: txt, userName: currentUser })
+                    });
+
+                    var data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(data?.error || `AI request failed (${res.status})`);
+                    }
+                    if (!data.reply) {
+                        throw new Error("The AI returned an empty response. Please try again.");
+                    }
+                    saveBotReply(data.reply);
+                } catch (e) {
+                    saveBotReply("⚠️ " + (e.message || "Something went wrong reaching the AI. Please try again."), true);
+                }
+
+                sendBtn.disabled = false;
+                inputField.disabled = false;
+                inputField.focus();
+            }
+        }
+
+        function saveBotReply(replyText, isError) {
+            var loader = document.getElementById('bot_loader');
+            if (loader) loader.remove();
+
+            var privateStorageKey = currentUser + '_chatHistory_ai_bot';
+            var logs = JSON.parse(localStorage.getItem(privateStorageKey)) || [];
+            logs.push({ sender: 'ai', text: replyText, error: !!isError });
+            localStorage.setItem(privateStorageKey, JSON.stringify(logs));
+            renderChatLogs();
+
+            if (isError) {
+                var lastBubble = document.getElementById('logStreamBox').lastElementChild;
+                if (lastBubble) lastBubble.classList.add('error');
+            }
+        }
+
+        function deleteMessageRow(idx, event) {
+            event.stopPropagation();
+            var privateStorageKey = currentUser + '_chatHistory_' + activeChatId;
+            var logs = JSON.parse(localStorage.getItem(privateStorageKey)) || [];
+            logs.splice(idx, 1);
+            localStorage.setItem(privateStorageKey, JSON.stringify(logs));
+            renderChatLogs();
+        }
+    </script>
+</body>
+</html>

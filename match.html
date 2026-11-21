@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel App - Match</title>
+    <style>
+        html, body { margin: 0; padding: 0; overflow: hidden; background: #cbd5e1; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+        .phone-frame { width: 345px; height: 610px; background: #ffffff; border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); border: 8px solid #1e293b; position: relative; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; transform: scale(0.85); transform-origin: center center; }
+        .top-header { display: flex; align-items: center; padding: 12px 15px; background: #ffffff; border-bottom: 1px solid #f0f4f8; }
+        .back-link { text-decoration: none; font-size: 13px; color: #194569; font-weight: bold; padding-right: 15px; }
+
+        .match-content { flex: 1; overflow-y: auto; padding: 15px; box-sizing: border-box; scrollbar-width: none; display: flex; flex-direction: column; align-items: center; }
+
+        .swipe-card { width: 100%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+        .swipe-photo { width: 100%; height: 220px; background: #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 48px; overflow: hidden; }
+        .swipe-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .swipe-info { padding: 14px; text-align: left; }
+        .swipe-username { font-size: 16px; font-weight: bold; color: #194569; margin: 0 0 6px 0; }
+        .shared-interest-note { font-size: 10px; color: #2a9d8f; font-weight: bold; margin-bottom: 8px; }
+        .interest-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .interest-chip { background: #f0f7fc; color: #194569; font-size: 10px; font-weight: bold; padding: 3px 9px; border-radius: 12px; }
+        .interest-chip.shared { background: #e0f0e8; color: #2a9d8f; }
+
+        .swipe-actions { display: flex; gap: 12px; margin-top: 16px; width: 100%; }
+        .swipe-btn { flex: 1; padding: 12px; border: none; border-radius: 14px; font-size: 20px; cursor: pointer; }
+        .swipe-btn.pass { background: #f1f5f9; color: #e63946; }
+        .swipe-btn.connect { background: #194569; color: white; }
+
+        .empty-state { text-align: center; margin-top: 40px; font-size: 12px; color: #888; }
+        .empty-state a { color: #194569; font-weight: bold; text-decoration: none; }
+
+        .match-popup { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(25,69,105,0.95); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
+        .match-popup.active { display: flex; }
+        .match-popup h2 { font-size: 24px; margin-bottom: 8px; }
+        .match-popup p { font-size: 13px; margin-bottom: 20px; }
+        .match-popup button { background: white; color: #194569; border: none; padding: 10px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 13px; }
+
+        .matches-list-title { font-size: 11px; font-weight: bold; color: #666; text-transform: uppercase; margin: 20px 0 8px 0; align-self: flex-start; }
+        .match-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; background: #f8fafc; border-radius: 10px; margin-bottom: 6px; }
+        .match-row-avatar { width: 32px; height: 32px; border-radius: 50%; background: #cbd5e1; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .match-row-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="top-header">
+            <a href="solo.html" class="back-link">← Messages</a>
+            <h3 style="margin: 0; color: #194569; font-size: 14px; font-weight: bold;">Find Travel Buddies</h3>
+        </div>
+
+        <div class="match-content" id="matchContent">
+            <p style="font-size: 11px; color: #888; margin-top: 40px;">Loading...</p>
+        </div>
+
+        <div class="match-popup" id="matchPopup">
+            <h2>🎉 It's a Match!</h2>
+            <p id="matchPopupText"></p>
+            <button onclick="closeMatchPopup()">Keep Exploring</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import {
+            getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs
+        } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs0OGS4sSH8cnKCFEcHULC2Dj7Fp1tQIY",
+            authDomain: "travel-app-9a965.firebaseapp.com",
+            projectId: "travel-app-9a965",
+            storageBucket: "travel-app-9a965.firebasestorage.app",
+            messagingSenderId: "611523199957",
+            appId: "1:611523199957:web:0b183bc5f1e8f67182335c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const contentEl = document.getElementById('matchContent');
+
+        let myUid = null;
+        let myData = null;
+        let candidates = [];
+        let candidateIndex = 0;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
+            myUid = user.uid;
+
+            const mySnap = await getDoc(doc(db, "users", myUid));
+            if (!mySnap.exists()) return;
+            myData = mySnap.data();
+
+            const myCity = (myData.currentCity || "").trim().toLowerCase();
+            if (!myData.visibleOnSolo || myCity === "") {
+                contentEl.innerHTML = `<div class="empty-state">Turn on visibility and set your city in <a href="setting.html">Settings</a> to start matching.</div>`;
+                return;
+            }
+
+            await loadCandidates(myCity);
+            renderMatchesList();
+        });
+
+        async function loadCandidates(myCity) {
+            // Everyone visible in the same city
+            const q = query(collection(db, "users"), where("visibleOnSolo", "==", true));
+            const snap = await getDocs(q);
+
+            // My past swipes, so we don't show the same person twice
+            const mySwipesSnap = await getDocs(query(collection(db, "swipes"), where("from", "==", myUid)));
+            const alreadySwiped = new Set();
+            mySwipesSnap.forEach((s) => alreadySwiped.add(s.data().to));
+
+            candidates = [];
+            snap.forEach((docSnap) => {
+                if (docSnap.id === myUid) return;
+                if (alreadySwiped.has(docSnap.id)) return;
+                const data = docSnap.data();
+                const theirCity = (data.currentCity || "").trim().toLowerCase();
+                if (theirCity === myCity) {
+                    candidates.push({ uid: docSnap.id, ...data });
+                }
+            });
+
+            // Sort so people with more shared interests appear first
+            const myInterests = myData.interests || [];
+            candidates.sort((a, b) => {
+                const aShared = (a.interests || []).filter(i => myInterests.includes(i)).length;
+                const bShared = (b.interests || []).filter(i => myInterests.includes(i)).length;
+                return bShared - aShared;
+            });
+
+            candidateIndex = 0;
+            renderCurrentCard();
+        }
+
+        function renderCurrentCard() {
+            if (candidateIndex >= candidates.length) {
+                contentEl.innerHTML = `<div class="empty-state">No more travelers to show right now. Check back later!</div>`;
+                renderMatchesList();
+                return;
+            }
+
+            const c = candidates[candidateIndex];
+            const myInterests = myData.interests || [];
+            const theirInterests = c.interests || [];
+            const sharedCount = theirInterests.filter(i => myInterests.includes(i)).length;
+
+            const chipsHtml = theirInterests.map(i => {
+                const isShared = myInterests.includes(i);
+                return `<span class="interest-chip ${isShared ? 'shared' : ''}">${i}</span>`;
+            }).join('');
+
+            contentEl.innerHTML = `
+                <div class="swipe-card">
+                    <div class="swipe-photo">
+                        ${c.avatarBase64 ? `<img src="${c.avatarBase64}">` : '👤'}
+                    </div>
+                    <div class="swipe-info">
+                        <p class="swipe-username">@${c.username || 'traveler'}</p>
+                        ${sharedCount > 0 ? `<p class="shared-interest-note">✨ ${sharedCount} shared interest${sharedCount > 1 ? 's' : ''}</p>` : ''}
+                        <div class="interest-chip-row">${chipsHtml || '<span style="font-size:10px; color:#999;">No interests listed</span>'}</div>
+                    </div>
+                </div>
+                <div class="swipe-actions">
+                    <button class="swipe-btn pass" onclick="handleSwipe('pass')">✕</button>
+                    <button class="swipe-btn connect" onclick="handleSwipe('connect')">❤️</button>
+                </div>
+            `;
+        }
+
+        window.handleSwipe = async function (action) {
+            const target = candidates[candidateIndex];
+            if (!target) return;
+
+            const swipeId = `${myUid}_${target.uid}`;
+            await setDoc(doc(db, "swipes", swipeId), {
+                from: myUid,
+                to: target.uid,
+                action: action,
+                timestamp: Date.now()
+            });
+
+            if (action === 'connect') {
+                // Check if they already swiped 'connect' on me
+                const theirSwipeSnap = await getDoc(doc(db, "swipes", `${target.uid}_${myUid}`));
+                if (theirSwipeSnap.exists() && theirSwipeSnap.data().action === 'connect') {
+                    // Mutual match! Save it under a consistent sorted key
+                    const pairKey = [myUid, target.uid].sort().join('_');
+                    await setDoc(doc(db, "matches", pairKey), {
+                        users: [myUid, target.uid],
+                        matchedAt: Date.now()
+                    });
+                    showMatchPopup(target.username);
+                }
+            }
+
+            candidateIndex++;
+            renderCurrentCard();
+        };
+
+        function showMatchPopup(theirUsername) {
+            document.getElementById('matchPopupText').textContent =
+                `You and @${theirUsername} both want to connect! Real chat is coming in the next update — for now, you're on each other's matches list.`;
+            document.getElementById('matchPopup').classList.add('active');
+        }
+
+        window.closeMatchPopup = function () {
+            document.getElementById('matchPopup').classList.remove('active');
+        };
+
+        async function renderMatchesList() {
+            const q1 = query(collection(db, "matches"), where("users", "array-contains", myUid));
+            const snap = await getDocs(q1);
+
+            if (snap.empty) return;
+
+            const existingList = contentEl.querySelector('.matches-list-title');
+            if (existingList) existingList.remove();
+
+            const title = document.createElement('p');
+            title.className = "matches-list-title";
+            title.textContent = "🎉 Your Matches";
+            contentEl.appendChild(title);
+
+            for (const matchDoc of snap.docs) {
+                const users = matchDoc.data().users;
+                const otherUid = users.find(u => u !== myUid);
+                const otherSnap = await getDoc(doc(db, "users", otherUid));
+                if (!otherSnap.exists()) continue;
+                const otherData = otherSnap.data();
+
+                const row = document.createElement('div');
+                row.className = "match-row";
+                row.innerHTML = `
+                    <div class="match-row-avatar">${otherData.avatarBase64 ? `<img src="${otherData.avatarBase64}">` : '👤'}</div>
+                    <strong style="font-size:12px; color:#194569;">@${otherData.username || 'traveler'}</strong>
+                `;
+                contentEl.appendChild(row);
+            }
+        }
+    </script>
+</body>
+</html>

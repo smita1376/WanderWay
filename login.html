@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel App - Log In</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: #cbd5e1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .phone-frame {
+            width: 345px;
+            height: 610px;
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+            border: 8px solid #1e293b;
+            box-sizing: border-box;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #91AEC4;
+            background: #f8fafc;
+            border-radius: 12px;
+            outline: none;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background: #194569;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status-msg { font-size: 12px; margin-top: 10px; min-height: 16px; }
+        .status-msg.error { color: #e63946; }
+        .status-msg.success { color: #2a9d8f; }
+    </style>
+</head>
+<body>
+
+    <div class="phone-frame">
+        <h2 style="color: #194569; margin-bottom: 5px;">Welcome Back! 👋</h2>
+        <p style="color: #666; font-size: 13px; margin-top: 0; margin-bottom: 25px;">Log in to access your travel dashboard</p>
+
+        <input type="email" id="loginEmailInput" class="input-field" placeholder="Enter Registered Email">
+        <input type="password" id="loginPasswordInput" class="input-field" placeholder="Enter Password">
+
+        <button type="button" id="loginBtn" class="action-btn">Log In</button>
+        <p class="status-msg" id="statusMsg"></p>
+
+        <p style="font-size: 13px; color: #555; margin-top: 15px;">
+            Don't have an account? <a href="signup.html" style="color: #194569; font-weight: bold; text-decoration: none;">Sign Up</a>
+        </p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword
+        } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc
+        } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs0OGS4sSH8cnKCFEcHULC2Dj7Fp1tQIY",
+            authDomain: "travel-app-9a965.firebaseapp.com",
+            projectId: "travel-app-9a965",
+            storageBucket: "travel-app-9a965.firebasestorage.app",
+            messagingSenderId: "611523199957",
+            appId: "1:611523199957:web:0b183bc5f1e8f67182335c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const emailInput = document.getElementById('loginEmailInput');
+        const passInput = document.getElementById('loginPasswordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        loginBtn.addEventListener('click', async function () {
+            const emailVal = emailInput.value.toLowerCase().trim();
+            const passVal = passInput.value.trim();
+
+            statusMsg.textContent = "";
+            statusMsg.className = "status-msg";
+
+            if (emailVal === "" || passVal === "") {
+                statusMsg.textContent = "Please complete both form entry lines.";
+                statusMsg.className = "status-msg error";
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = "Logging in...";
+
+            try {
+                // Real sign-in against Firebase Auth (replaces the old
+                // localStorage 'appUsersDatabase' plaintext lookup)
+                const userCredential = await signInWithEmailAndPassword(auth, emailVal, passVal);
+                const user = userCredential.user;
+
+                // Pull the saved name from Firestore so we can keep writing
+                // loggedInUser to localStorage — this keeps profile.html,
+                // discover.html, etc. working exactly as before, unchanged.
+                let displayName = user.displayName;
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().name) {
+                        displayName = userDoc.data().name;
+                    }
+                } catch (e) {
+                    // Firestore lookup failing isn't fatal — fall back to Auth's displayName
+                }
+
+                localStorage.setItem('loggedInUser', displayName || "Traveler");
+
+                statusMsg.textContent = "Welcome back, " + (displayName || "Traveler") + "!";
+                statusMsg.className = "status-msg success";
+
+                setTimeout(() => {
+                    window.location.href = "discover.html";
+                }, 800);
+
+            } catch (error) {
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Log In";
+                statusMsg.className = "status-msg error";
+
+                if (error.code === "auth/invalid-credential" || error.code === "auth/wrong-password") {
+                    statusMsg.textContent = "Incorrect email or password.";
+                } else if (error.code === "auth/user-not-found") {
+                    statusMsg.textContent = "No account registered under this email address.";
+                } else if (error.code === "auth/too-many-requests") {
+                    statusMsg.textContent = "Too many attempts. Please wait and try again.";
+                } else {
+                    statusMsg.textContent = "Something went wrong: " + error.message;
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

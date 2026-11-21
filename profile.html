@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel App - My Profile</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background: #cbd5e1; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif; 
+        }
+
+        .phone-frame {
+            width: 345px;
+            height: 610px; 
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+            border: 8px solid #1e293b;
+            position: relative; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            transform: scale(0.85); 
+            transform-origin: center center;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #ffffff;
+            border-bottom: 1px solid #f0f4f8;
+            z-index: 100;
+        }
+
+        .profile-scroll-view { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 12px; 
+            padding-bottom: 75px; 
+            box-sizing: border-box;
+            scrollbar-width: none; 
+        }
+        .profile-scroll-view::-webkit-scrollbar { 
+            display: none !important; 
+        }
+
+        .avatar-img-box { 
+            width: 75px; 
+            height: 75px; 
+            background: #cbd5e1; 
+            border-radius: 50%; 
+            margin: 5px auto; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 28px; 
+            border: 3px solid #194569; 
+            position: relative; 
+            cursor: pointer;
+        }
+        .avatar-img-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        
+        .camera-badge-icon {
+            position: absolute; 
+            bottom: -2px; 
+            right: -2px; 
+            background: #194569; 
+            color: #fff; 
+            width: 22px; 
+            height: 22px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 10px;
+            border: 2px solid #ffffff;
+        }
+
+        .creation-form-box { 
+            background: #f8fafc; 
+            border: 1px dashed #91AEC4; 
+            border-radius: 14px; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        }
+        .form-input { 
+            padding: 8px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 6px; 
+            outline: none; 
+            font-size: 12px; 
+            font-family: inherit; 
+            box-sizing: border-box; 
+            width: 100%; 
+            background: #ffffff;
+        }
+        .action-button-row { display: flex; gap: 6px; }
+        .btn-blue-action { flex: 1; background: #194569; color: #ffffff; border: none; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .btn-blue-action.secondary { background: #5F84A2; }
+
+        .instagram-post-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-top: 14px; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .post-header { display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid #f1f5f9; }
+        .delete-post-link { margin-left: auto; color: #e63946; font-size: 11px; font-weight: bold; cursor: pointer; }
+
+        .post-img-frame { width: 100%; height: 150px; overflow: hidden; }
+        .post-img-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .post-details-panel { padding: 10px; }
+        
+        .action-links-row { display: flex; gap: 12px; margin-bottom: 4px; font-size: 12px; font-weight: bold; color: #194569; }
+        .action-link-item { cursor: pointer; }
+        .comments-output-list { background: #f8fafc; border-radius: 8px; padding: 6px 8px; margin-top: 6px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 3px; }
+        .comment-row-line { font-size: 11px; color: #333; text-align: left; line-height: 1.2; }
+
+        .bottom-nav { 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 55px; 
+            background: #ffffff; 
+            border-top: 1px solid #f0f0f0; 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            box-sizing: border-box; 
+            z-index: 9999; 
+        }
+        .nav-item { background: none; border: none; font-size: 11px; font-weight: bold; color: #5F84A2; display: flex; flex-direction: column; align-items: center; text-decoration: none; cursor: pointer; line-height: 1.4; }
+        .nav-item.active { color: #194569; }
+
+        /* INLINE APP MODAL DESIGN RULES */
+        .app-overlay-input-widget {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4);
+            z-index: 200000; display: none; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
+        }
+        .app-overlay-input-widget.active { display: flex; }
+        .widget-box-frame { background: #ffffff; border-radius: 16px; padding: 16px; width: 100%; box-sizing: border-box; }
+        .widget-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; margin-bottom: 12px; font-size: 13px; box-sizing: border-box; }
+        .widget-btn-row { display: flex; gap: 8px; }
+        .w-btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    
+    <div class="phone-frame">
+        <div class="top-header">
+            <button onclick="toggleWishlistStoreView()" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 2px 5px; color: #e63946;">❤️</button>
+            <h3 style="margin: 0; color: #194569; font-size: 14px; font-weight: bold;" id="profileHeaderTitle">My Profile</h3>
+            <div style="display: flex; align-items: center; gap: 4px;">
+                <a href="calendar.html" style="text-decoration: none; font-size: 18px; color: #194569; padding: 2px 5px;" title="Calendar">📅</a>
+                <a href="journal.html" style="text-decoration: none; font-size: 18px; color: #194569; padding: 2px 5px;" title="Journal">📝</a>
+                <a href="setting.html" style="text-decoration: none; font-size: 18px; color: #194569; padding: 2px 5px;">⚙️</a>
+            </div>
+        </div>
+
+        <div class="profile-scroll-view">
+            
+            <div id="profileUserSummaryView" style="text-align: center; margin-bottom: 10px;">
+                <div class="avatar-img-box" onclick="document.getElementById('profilePicInput').click()">
+                    <div id="avatarContainer">👤</div>
+                    <div class="camera-badge-icon">📸</div>
+                </div>
+                <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="handleAvatarUpload()">
+
+                <h2 id="displayName" contenteditable="true" onblur="syncEditedName()" style="color: #194569; margin: 4px 0 2px 0; font-size: 18px; font-weight: bold; border-bottom: 1px dashed #194569; display: inline-block; outline: none; min-width: 40px;">Joe</h2>
+                <p style="color: #5F84A2; font-size: 11px; font-weight: bold; margin: 0 0 6px 0;">@my_travel_id</p>
+            </div>
+
+            <p style="font-size: 12px; color: #333; font-weight: bold; margin: 12px 0 6px 2px; text-align: left;">Your Interests</p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; margin-bottom: 15px;">
+                <div id="interestsChipList" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 20px;"></div>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="newInterestInput" class="form-input" placeholder="e.g. trekking, food, photography" style="flex: 1;" onkeypress="if(event.key==='Enter'){event.preventDefault(); addInterestTag();}">
+                    <button type="button" onclick="addInterestTag()" style="background:#194569; color:#fff; border:none; border-radius:6px; padding:0 12px; font-size:12px; font-weight:bold; cursor:pointer;">Add</button>
+                </div>
+            </div>
+
+            <p id="creatorBoxLabel" style="font-size: 12px; color: #333; font-weight: bold; margin: 15px 0 6px 2px; text-align: left;">Share a New Moment</p>
+            <div class="creation-form-box">
+                <input type="text" id="postLocation" class="form-input" placeholder="Location name (e.g., Kolkata, Princep Ghat)">
+                <textarea id="postCaption" class="form-input" rows="2" placeholder="Write down your post text caption here..."></textarea>
+                <div class="action-button-row">
+                    <input type="file" id="postImageFile" accept="image/*" style="display: none;" onchange="handlePostImageSelect()">
+                    <button type="button" onclick="document.getElementById('postImageFile').click()" class="btn-blue-action secondary">📸 Add Photo</button>
+                    <button type="button" onclick="publishNewInstagramPost()" class="btn-blue-action">Publish 🚀</button>
+                </div>
+                <div id="postImgPreviewFrame" style="display: none; width: 100%; height: 60px; border-radius: 6px; overflow: hidden; margin-top: 4px;"><img id="postImgPreview" src="" style="width:100%; height:100%; object-fit:cover;"></div>
+            </div>
+
+            <h4 style="color:#194569; margin: 15px 0 4px 0; font-size: 11px; text-align: left;" id="timelineHeaderTitle">My Shared Posts</h4>
+            <div id="personalGemsTimeline"></div>
+        </div>
+
+        <div class="app-overlay-input-widget" id="profileInputWidget">
+            <div class="widget-box-frame">
+                <p id="profileWidgetLabel" style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #194569; text-align: left;">Confirm Action:</p>
+                <input type="text" id="profileWidgetField" class="widget-input">
+                <div class="widget-btn-row">
+                    <button class="w-btn" onclick="closeProfileModalWidget()" style="background:#e2e8f0; color:#333;">Cancel</button>
+                    <button class="w-btn" onclick="commitProfileModalWidget()" style="background:#194569; color:#fff;" id="widgetSubmitButton">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <a href="discover.html" class="nav-item">🏠<br>Explore</a>
+            <a href="solo.html" class="nav-item">💬<br>Messages</a>
+            <button class="nav-item active">👤<br>Profile</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import {
+            getFirestore, doc, getDoc, updateDoc, collection, addDoc, deleteDoc,
+            query, where, getDocs, orderBy, arrayUnion, arrayRemove, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs0OGS4sSH8cnKCFEcHULC2Dj7Fp1tQIY",
+            authDomain: "travel-app-9a965.firebaseapp.com",
+            projectId: "travel-app-9a965",
+            storageBucket: "travel-app-9a965.firebasestorage.app",
+            messagingSenderId: "611523199957",
+            appId: "1:611523199957:web:0b183bc5f1e8f67182335c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Expose Firestore + helpers to the classic (non-module) script below,
+        // which handles the posting form and timeline rendering.
+        window._fb = {
+            db, doc, getDoc, updateDoc, collection, addDoc, deleteDoc,
+            query, where, getDocs, orderBy, arrayUnion, arrayRemove, serverTimestamp
+        };
+
+        let currentUserRef = null;
+        let currentInterests = [];
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) return; // profile.html doesn't force login-redirect yet; interests just won't load
+
+            window._fb.myUid = user.uid;
+            window._fb.myUsername = localStorage.getItem('loggedInUsername') || localStorage.getItem('loggedInUser') || "traveler";
+
+            currentUserRef = doc(db, "users", user.uid);
+            const snap = await getDoc(currentUserRef);
+            if (snap.exists()) {
+                const data = snap.data();
+                currentInterests = data.interests || [];
+                renderInterestChips();
+
+                // Firestore is the source of truth for the avatar now (visible
+                // to other users), but we still cache it in localStorage below
+                // via handleAvatarUpload for instant load next time.
+                if (data.avatarBase64) {
+                    document.getElementById('avatarContainer').innerHTML = `<img src="${data.avatarBase64}">`;
+                }
+            }
+
+            // Now that we know who's logged in, load their real posts
+            if (window.loadMyPersonalTimeline) window.loadMyPersonalTimeline();
+        });
+
+        window.saveAvatarToFirestore = async function (base64Image) {
+            if (!currentUserRef) return;
+            try {
+                await updateDoc(currentUserRef, { avatarBase64: base64Image });
+            } catch (e) {
+                console.error("Failed to save avatar to Firestore:", e);
+            }
+        };
+
+        function renderInterestChips() {
+            const list = document.getElementById('interestsChipList');
+            list.innerHTML = "";
+
+            if (currentInterests.length === 0) {
+                list.innerHTML = '<span style="font-size:11px; color:#888;">No interests added yet.</span>';
+                return;
+            }
+
+            currentInterests.forEach((tag) => {
+                const chip = document.createElement('span');
+                chip.style.cssText = "background:#e0f0e8; color:#2a9d8f; font-size:11px; font-weight:bold; padding:4px 10px; border-radius:14px; display:flex; align-items:center; gap:6px;";
+                chip.innerHTML = `${tag} <span style="cursor:pointer; color:#a12727;" data-tag="${tag}">✕</span>`;
+                chip.querySelector('span[data-tag]').addEventListener('click', () => removeInterestTag(tag));
+                list.appendChild(chip);
+            });
+        }
+
+        window.addInterestTag = async function () {
+            const input = document.getElementById('newInterestInput');
+            const val = input.value.trim().toLowerCase();
+            if (val === "") return;
+
+            if (currentInterests.includes(val)) {
+                input.value = "";
+                return;
+            }
+
+            currentInterests.push(val);
+            renderInterestChips();
+            input.value = "";
+
+            if (currentUserRef) {
+                try {
+                    await updateDoc(currentUserRef, { interests: currentInterests });
+                } catch (e) {
+                    console.error("Failed to save interest:", e);
+                }
+            }
+        };
+
+        window.removeInterestTag = async function (tag) {
+            currentInterests = currentInterests.filter(t => t !== tag);
+            renderInterestChips();
+
+            if (currentUserRef) {
+                try {
+                    await updateDoc(currentUserRef, { interests: currentInterests });
+                } catch (e) {
+                    console.error("Failed to remove interest:", e);
+                }
+            }
+        };
+    </script>
+
+    <script>
+        var postImgBase64 = "";
+        var activeProfileTargetPostId = "";
+        var modalActionType = ""; // 'comment' or 'delete'
+        var currentProfileViewMode = "posts";
+
+        window.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('displayName').textContent = localStorage.getItem('loggedInUser') || "Joe";
+            var cachedAvatar = localStorage.getItem('profileAvatarPic');
+            if(cachedAvatar) document.getElementById('avatarContainer').innerHTML = `<img src="${cachedAvatar}">`;
+
+            // loadMyPersonalTimeline() is now called from onAuthStateChanged
+            // once we actually know who's logged in — calling it here would
+            // run before Firebase confirms the user.
+        });
+
+        function toggleWishlistStoreView() {
+            var container = document.getElementById('personalGemsTimeline');
+            if(currentProfileViewMode === "posts") {
+                currentProfileViewMode = "wishlist";
+                document.getElementById('profileHeaderTitle').textContent = "❤️ Wishlist Store";
+                document.getElementById('timelineHeaderTitle').textContent = "Saved Places Portfolio";
+                document.getElementById('creatorBoxLabel').style.display = "none";
+                document.querySelector('.creation-form-box').style.display = "none";
+                renderWishlistStoreContent(container);
+            } else {
+                currentProfileViewMode = "posts";
+                document.getElementById('profileHeaderTitle').textContent = "My Profile";
+                document.getElementById('timelineHeaderTitle').textContent = "My Shared Posts";
+                document.getElementById('creatorBoxLabel').style.display = "block";
+                document.querySelector('.creation-form-box').style.display = "flex";
+                loadMyPersonalTimeline();
+            }
+        }
+
+        function renderWishlistStoreContent(container) {
+            var wishlist = JSON.parse(localStorage.getItem('myWishlistIds')) || [];
+            container.innerHTML = "";
+
+            if(wishlist.length === 0) {
+                container.innerHTML = `<p style="text-align:center; font-size:12px; color:#888; margin-top:20px;">Your Wishlist folder is empty. Like a destination on Explore to collect cards here!</p>`;
+                return;
+            }
+
+            wishlist.forEach(item => {
+                var card = document.createElement('div');
+                card.className = "instagram-post-card";
+                card.innerHTML = `
+                    <div class="post-header"><strong style="color:#194569; font-size:13px;">📍 ${item.name || 'Saved Spot'}</strong></div>
+                    <div class="post-img-frame"><img src="${item.image}"></div>
+                    <div class="post-details-panel" style="padding:10px;"><p style="margin:0; font-size:12px; color:#333;">${item.location || ''}</p></div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function loadMyPersonalTimeline() {
+            var container = document.getElementById('personalGemsTimeline');
+            if (!window._fb || !window._fb.myUid) return; // not logged in yet
+
+            var { db, collection, query, where, getDocs, orderBy } = window._fb;
+            var wishlist = JSON.parse(localStorage.getItem('myWishlistIds')) || [];
+            container.innerHTML = `<p style="text-align:center; font-size:11px; color:#888; margin-top:15px;">Loading your posts...</p>`;
+
+            var q = query(collection(db, "posts"), where("authorUid", "==", window._fb.myUid), orderBy("createdAt", "desc"));
+            var snap = await getDocs(q);
+
+            container.innerHTML = "";
+
+            if (snap.empty) {
+                container.innerHTML = `<p style="text-align:center; font-size:11px; color:#888; margin-top:15px;">Your uploaded feed moments will display down here.</p>`;
+                return;
+            }
+
+            snap.forEach((docSnap) => {
+                var post = { id: docSnap.id, ...docSnap.data() };
+                var commentsArr = post.comments || [];
+                var isWishlisted = wishlist.some(item => item.id === post.id);
+                var card = document.createElement('div');
+                card.className = "instagram-post-card";
+                card.id = "profile_postcard_" + post.id;
+
+                card.innerHTML = `
+                    <div class="post-header">
+                        <div style="font-size:12px; color:#194569; font-weight:bold;">📍 ${post.location}</div>
+                        <span class="delete-post-link" onclick="launchProfileDeleteModal('${post.id}')">🗑️ Delete</span>
+                    </div>
+                    <div class="post-img-frame"><img src="${post.image}"></div>
+                    <div class="post-details-panel">
+                        <div class="action-links-row">
+                            <span class="action-link-item" onclick="toggleProfileWishlist('${post.id}')" style="color: ${isWishlisted ? '#e63946' : '#194569'}">
+                                ${isWishlisted ? '❤️ Wishlisted' : '🤍 Like'}
+                            </span>
+                            <span class="action-link-item" onclick="launchProfileCommentModal('${post.id}')">💬 Comment (${commentsArr.length})</span>
+                        </div>
+                        <p style="margin: 4px 0 0 0; font-size: 12px; line-height: 1.3; color: #222;"><strong>@${window._fb.myUsername}:</strong> ${post.caption}</p>
+
+                        <div class="comments-output-list" style="display: ${commentsArr.length > 0 ? 'flex' : 'none'}">
+                            ${commentsArr.map(c => `<div class="comment-row-line"><strong>@${c.user}:</strong> ${c.text}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        window.loadMyPersonalTimeline = loadMyPersonalTimeline;
+
+        function launchProfileCommentModal(id) {
+            activeProfileTargetPostId = id;
+            modalActionType = "comment";
+            document.getElementById('profileWidgetLabel').textContent = "Write a public comment for your post:";
+            document.getElementById('profileWidgetField').style.display = "block";
+            document.getElementById('profileWidgetField').value = "";
+            document.getElementById('widgetSubmitButton').textContent = "Submit";
+            document.getElementById('profileInputWidget').classList.add('active');
+        }
+
+        function launchProfileDeleteModal(id) {
+            activeProfileTargetPostId = id;
+            modalActionType = "delete";
+            document.getElementById('profileWidgetLabel').textContent = "Are you sure you want to delete this moment permanently?";
+            document.getElementById('profileWidgetField').style.display = "none";
+            document.getElementById('widgetSubmitButton').textContent = "Delete";
+            document.getElementById('profileInputWidget').classList.add('active');
+        }
+
+        function closeProfileModalWidget() { document.getElementById('profileInputWidget').classList.remove('active'); }
+
+        async function commitProfileModalWidget() {
+            var { db, doc, deleteDoc, updateDoc, arrayUnion } = window._fb;
+
+            if (modalActionType === "comment") {
+                var val = document.getElementById('profileWidgetField').value.trim();
+                if (val === "") return closeProfileModalWidget();
+
+                await updateDoc(doc(db, "posts", activeProfileTargetPostId), {
+                    comments: arrayUnion({ user: window._fb.myUsername, text: val })
+                });
+            } else if (modalActionType === "delete") {
+                await deleteDoc(doc(db, "posts", activeProfileTargetPostId));
+            }
+
+            await loadMyPersonalTimeline();
+            closeProfileModalWidget();
+        }
+
+        async function publishNewInstagramPost() {
+            var locInput = document.getElementById('postLocation').value.trim();
+            var capInput = document.getElementById('postCaption').value.trim();
+            if (locInput === "" || capInput === "") return alert("Please complete all form row inputs!");
+
+            if (!window._fb || !window._fb.myUid) {
+                alert("Please wait a moment for login to finish, then try again.");
+                return;
+            }
+
+            var { db, collection, addDoc, serverTimestamp } = window._fb;
+            var publishBtn = document.querySelector('.btn-blue-action:not(.secondary)');
+            if (publishBtn) { publishBtn.disabled = true; publishBtn.textContent = "Publishing..."; }
+
+            try {
+                await addDoc(collection(db, "posts"), {
+                    authorUid: window._fb.myUid,
+                    authorUsername: window._fb.myUsername,
+                    location: locInput,
+                    caption: capInput,
+                    image: postImgBase64 || "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=500&q=80",
+                    comments: [],
+                    createdAt: serverTimestamp()
+                });
+
+                document.getElementById('postLocation').value = "";
+                document.getElementById('postCaption').value = "";
+                document.getElementById('postImgPreviewFrame').style.display = "none";
+                postImgBase64 = "";
+
+                await loadMyPersonalTimeline();
+                alert("🚀 Moment Published successfully onto the live Explore feeds!");
+            } catch (e) {
+                alert("Something went wrong publishing: " + e.message);
+            }
+
+            if (publishBtn) { publishBtn.disabled = false; publishBtn.textContent = "Publish 🚀"; }
+        }
+
+        function toggleProfileWishlist(postId) {
+            var wishlist = JSON.parse(localStorage.getItem('myWishlistIds')) || [];
+            if(wishlist.some(item => item.id === postId)) {
+                wishlist = wishlist.filter(item => item.id !== postId);
+            } else {
+                wishlist.push({ id: postId, name: "Profile Post", location: "My Upload Portfolio", image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=500&q=80" });
+            }
+            localStorage.setItem('myWishlistIds', JSON.stringify(wishlist));
+            loadMyPersonalTimeline();
+        }
+
+        function syncEditedName() {
+            var inputName = document.getElementById('displayName').textContent.trim();
+            if(inputName !== "") localStorage.setItem('loggedInUser', inputName);
+        }
+
+        function handleAvatarUpload() {
+            var file = document.getElementById('profilePicInput').files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onloadend = function() {
+                // Resize to a small square thumbnail before saving — keeps
+                // the image well under Firestore's 1MB document limit, and
+                // avatars don't need to be full resolution anyway.
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var size = 150;
+                    canvas.width = size;
+                    canvas.height = size;
+                    var ctx = canvas.getContext('2d');
+
+                    // Center-crop to a square so avatars aren't stretched
+                    var minSide = Math.min(img.width, img.height);
+                    var sx = (img.width - minSide) / 2;
+                    var sy = (img.height - minSide) / 2;
+                    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+
+                    var resizedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+                    document.getElementById('avatarContainer').innerHTML = `<img src="${resizedBase64}">`;
+                    localStorage.setItem('profileAvatarPic', resizedBase64);
+
+                    // Save to Firestore so other users can actually see this photo
+                    if (window.saveAvatarToFirestore) {
+                        window.saveAvatarToFirestore(resizedBase64);
+                    }
+                };
+                img.src = reader.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function handlePostImageSelect() {
+            var file = document.getElementById('postImageFile').files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onloadend = function() {
+                // Resize to a max width of 800px before saving — a full-res
+                // phone photo can easily be several MB, which would blow past
+                // Firestore's 1MB per-document limit.
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var maxWidth = 800;
+                    var scale = Math.min(1, maxWidth / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    postImgBase64 = canvas.toDataURL('image/jpeg', 0.75);
+                    document.getElementById('postImgPreview').src = postImgBase64;
+                    document.getElementById('postImgPreviewFrame').style.display = "block";
+                };
+                img.src = reader.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>

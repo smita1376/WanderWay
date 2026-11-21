@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel App - Calendar</title>
+    <style>
+        html, body { margin: 0; padding: 0; overflow: hidden; background: #cbd5e1; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+        .phone-frame { width: 345px; height: 610px; background: #ffffff; border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); border: 8px solid #1e293b; position: relative; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; transform: scale(0.85); transform-origin: center center; }
+        .top-header { display: flex; align-items: center; padding: 12px 15px; background: #ffffff; border-bottom: 1px solid #f0f4f8; }
+        .back-link { text-decoration: none; font-size: 13px; color: #194569; font-weight: bold; padding-right: 15px; }
+
+        .cal-content { flex: 1; overflow-y: auto; padding: 15px; box-sizing: border-box; scrollbar-width: none; }
+
+        .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .month-nav button { background: #f0f7fc; border: 1px solid #91AEC4; color: #194569; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .month-title { font-size: 15px; font-weight: bold; color: #194569; }
+
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-dow { font-size: 9px; color: #5F84A2; font-weight: bold; text-align: center; padding-bottom: 4px; }
+        .cal-day { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; border-radius: 8px; cursor: pointer; color: #333; background: #f8fafc; }
+        .cal-day.empty { background: none; cursor: default; }
+        .cal-day.today { border: 2px solid #194569; font-weight: bold; }
+        .cal-day.selected { background: #194569; color: white; }
+        .cal-day .dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: #e63946; }
+        .cal-day.selected .dot { background: white; }
+
+        .day-detail-box { margin-top: 16px; background: #f0f7fc; border: 1px solid #91AEC4; border-radius: 14px; padding: 12px; }
+        .day-detail-title { font-size: 12px; font-weight: bold; color: #194569; margin: 0 0 8px 0; text-align: left; }
+        .form-input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 11px; box-sizing: border-box; width: 100%; margin-bottom: 6px; }
+        .add-event-btn { width: 100%; padding: 8px; background: #194569; color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+
+        .event-row { display: flex; justify-content: space-between; align-items: flex-start; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; margin-top: 8px; text-align: left; }
+        .event-row-text { font-size: 11px; color: #333; }
+        .event-row-text strong { color: #194569; }
+        .event-delete { background: none; border: none; color: #e63946; cursor: pointer; font-size: 12px; padding: 0 4px; }
+        .no-events { font-size: 11px; color: #888; text-align: center; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="top-header">
+            <a href="profile.html" class="back-link">← Profile</a>
+            <h3 style="margin: 0; color: #194569; font-size: 14px; font-weight: bold;">Calendar</h3>
+        </div>
+
+        <div class="cal-content">
+            <div class="month-nav">
+                <button onclick="changeMonth(-1)">←</button>
+                <span class="month-title" id="monthTitle"></span>
+                <button onclick="changeMonth(1)">→</button>
+            </div>
+
+            <div class="cal-grid" id="calGrid"></div>
+
+            <div class="day-detail-box">
+                <p class="day-detail-title" id="selectedDayLabel">Select a day above</p>
+
+                <input type="text" id="eventPlaceInput" class="form-input" placeholder="Where to? (e.g. Marine Drive)">
+                <input type="text" id="eventNotesInput" class="form-input" placeholder="Notes (optional)">
+                <button type="button" class="add-event-btn" onclick="addEventToSelectedDay()">+ Add Plan</button>
+
+                <div id="dayEventsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var today = new Date();
+        var viewYear = today.getFullYear();
+        var viewMonth = today.getMonth(); // 0-indexed
+        var selectedDateStr = null;
+
+        var DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+        function formatDateStr(y, m, d) {
+            return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        }
+
+        function loadAllEvents() {
+            return JSON.parse(localStorage.getItem('travelCalendarEvents')) || [];
+        }
+
+        function saveAllEvents(events) {
+            localStorage.setItem('travelCalendarEvents', JSON.stringify(events));
+        }
+
+        function renderCalendar() {
+            var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            document.getElementById('monthTitle').textContent = monthNames[viewMonth] + ' ' + viewYear;
+
+            var grid = document.getElementById('calGrid');
+            grid.innerHTML = "";
+
+            DOW_LABELS.forEach(function(label) {
+                var el = document.createElement('div');
+                el.className = "cal-dow";
+                el.textContent = label;
+                grid.appendChild(el);
+            });
+
+            var firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+            var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            var events = loadAllEvents();
+            var todayStr = formatDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+
+            for (var i = 0; i < firstDayOfWeek; i++) {
+                var empty = document.createElement('div');
+                empty.className = "cal-day empty";
+                grid.appendChild(empty);
+            }
+
+            for (var d = 1; d <= daysInMonth; d++) {
+                var dateStr = formatDateStr(viewYear, viewMonth, d);
+                var dayEl = document.createElement('div');
+                dayEl.className = "cal-day";
+                if (dateStr === todayStr) dayEl.classList.add('today');
+                if (dateStr === selectedDateStr) dayEl.classList.add('selected');
+
+                var hasEvent = events.some(function(ev) { return ev.date === dateStr; });
+
+                dayEl.innerHTML = d + (hasEvent ? '<span class="dot"></span>' : '');
+                dayEl.onclick = (function(ds) { return function() { selectDay(ds); }; })(dateStr);
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function changeMonth(delta) {
+            viewMonth += delta;
+            if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+            if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+            renderCalendar();
+        }
+
+        function selectDay(dateStr) {
+            selectedDateStr = dateStr;
+            var dateParts = dateStr.split('-');
+            var readable = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            document.getElementById('selectedDayLabel').textContent = readable;
+            renderCalendar();
+            renderDayEvents();
+        }
+
+        function renderDayEvents() {
+            var listEl = document.getElementById('dayEventsList');
+            listEl.innerHTML = "";
+
+            if (!selectedDateStr) return;
+
+            var events = loadAllEvents().filter(function(ev) { return ev.date === selectedDateStr; });
+
+            if (events.length === 0) {
+                listEl.innerHTML = '<p class="no-events">No plans yet for this day.</p>';
+                return;
+            }
+
+            events.forEach(function(ev) {
+                var row = document.createElement('div');
+                row.className = "event-row";
+                row.innerHTML = `
+                    <div class="event-row-text">
+                        <strong>📍 ${ev.place}</strong>
+                        ${ev.notes ? '<br>' + ev.notes : ''}
+                    </div>
+                    <button class="event-delete" onclick="deleteEvent('${ev.id}')">🗑️</button>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        function addEventToSelectedDay() {
+            if (!selectedDateStr) {
+                alert("Please select a day on the calendar first!");
+                return;
+            }
+
+            var place = document.getElementById('eventPlaceInput').value.trim();
+            var notes = document.getElementById('eventNotesInput').value.trim();
+
+            if (place === "") {
+                alert("Please enter a location!");
+                return;
+            }
+
+            var events = loadAllEvents();
+            events.push({
+                id: "cal_event_" + Date.now(),
+                date: selectedDateStr,
+                place: place,
+                notes: notes
+            });
+            saveAllEvents(events);
+
+            document.getElementById('eventPlaceInput').value = "";
+            document.getElementById('eventNotesInput').value = "";
+
+            renderCalendar();
+            renderDayEvents();
+        }
+
+        function deleteEvent(id) {
+            var events = loadAllEvents().filter(function(ev) { return ev.id !== id; });
+            saveAllEvents(events);
+            renderCalendar();
+            renderDayEvents();
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            renderCalendar();
+            // Auto-select today so the panel isn't empty on first load
+            selectDay(formatDateStr(today.getFullYear(), today.getMonth(), today.getDate()));
+        });
+    </script>
+</body>
+</html>
